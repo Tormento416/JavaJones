@@ -5,7 +5,9 @@ import { INITIAL_UPGRADES } from './data/upgrades';
 import { runJavaScript } from './utils/jsRunner';
 import { soundEngine } from './utils/audio';
 
-import { LandingPage } from './components/LandingPage';
+import { TitleScreen } from './components/TitleScreen';
+import { SaveSlotModal } from './components/SaveSlotModal';
+import type { SaveSlotData } from './components/SaveSlotModal';
 import { Header } from './components/Header';
 import { CafeVisualizer } from './components/CafeVisualizer';
 import { CodeEditor } from './components/CodeEditor';
@@ -15,59 +17,63 @@ import { ShopUpgrades } from './components/ShopUpgrades';
 import { CodexModal } from './components/CodexModal';
 import { FranchiseMap } from './components/FranchiseMap';
 import { DownloadModal } from './components/DownloadModal';
-import { AccountModal } from './components/AccountModal';
 import { GameOverModal } from './components/GameOverModal';
 import { VictoryModal } from './components/VictoryModal';
 
-const STORAGE_KEY = 'java_jones_game_state_v1';
-const PROFILE_KEY = 'java_jones_user_profile_v1';
+const SAVE_SLOTS_KEY = 'java_jones_save_slots_v2';
+const ACTIVE_SLOT_KEY = 'java_jones_active_slot_id_v2';
+
+const createDefaultGameState = (): GameState => ({
+  currentDay: 1,
+  cash: 150,
+  totalCustomersServed: 0,
+  dayCustomersServed: 0,
+  currentStoreId: 'store_1',
+  purchasedUpgrades: [],
+  completedDays: [],
+  soundEnabled: true,
+  gameStatus: 'playing',
+  activeTab: 'barista',
+});
 
 export const App: React.FC = () => {
-  // Page view state: default to 'landing'
-  const [currentView, setCurrentView] = useState<'landing' | 'game'>('landing');
+  const [currentView, setCurrentView] = useState<'title' | 'game'>('title');
+  const [isSaveSlotModalOpen, setIsSaveSlotModalOpen] = useState<boolean>(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
 
-  // User Barista Account Profile
-  const [userProfile, setUserProfile] = useState<{ name: string; title: string; avatar: string } | null>(() => {
+  // 3 Game Save File Slots
+  const [saveSlots, setSaveSlots] = useState<SaveSlotData[]>(() => {
     try {
-      const saved = localStorage.getItem(PROFILE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      // ignore
-    }
-    return null;
-  });
-
-  // Game state
-  const [gameState, setGameState] = useState<GameState>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(SAVE_SLOTS_KEY);
       if (saved) {
         return JSON.parse(saved);
       }
     } catch (e) {
       // ignore
     }
-    return {
-      currentDay: 1,
-      cash: 150,
-      totalCustomersServed: 0,
-      dayCustomersServed: 0,
-      currentStoreId: 'store_1',
-      purchasedUpgrades: [],
-      completedDays: [],
-      soundEnabled: true,
-      gameStatus: 'playing',
-      activeTab: 'barista',
-    };
+    return [
+      { id: 'slot_1', slotNumber: 1, baristaName: 'Java Jones', avatar: '🧑‍🍳', gameState: null, lastSavedAt: null },
+      { id: 'slot_2', slotNumber: 2, baristaName: 'Java Jones', avatar: '👩‍💻', gameState: null, lastSavedAt: null },
+      { id: 'slot_3', slotNumber: 3, baristaName: 'Java Jones', avatar: '🧔‍♂️', gameState: null, lastSavedAt: null },
+    ];
   });
+
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_SLOT_KEY);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Current active game state
+  const [gameState, setGameState] = useState<GameState>(createDefaultGameState());
 
   const [upgrades] = useState<Upgrade[]>(INITIAL_UPGRADES);
   const [code, setCode] = useState<string>('');
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [isBrewing, setIsBrewing] = useState<boolean>(false);
-  const [isLessonModalOpen, setIsLessonModalOpen] = useState<boolean>(true);
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
+  const [isLessonModalOpen, setIsLessonModalOpen] = useState<boolean>(false);
 
   const currentLesson = LESSONS.find((l) => l.day === gameState.currentDay) || LESSONS[0];
 
@@ -75,33 +81,95 @@ export const App: React.FC = () => {
   useEffect(() => {
     setCode(currentLesson.starterCode);
     setRunResult(null);
-    setIsLessonModalOpen(true);
-  }, [gameState.currentDay]);
+    if (currentView === 'game') {
+      setIsLessonModalOpen(true);
+    }
+  }, [gameState.currentDay, currentView]);
 
-  // Persist state to localStorage
+  // Persist save slots to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(saveSlots));
     } catch (e) {
       // ignore
     }
-  }, [gameState]);
+  }, [saveSlots]);
 
-  // Persist profile
+  // Persist active slot ID
   useEffect(() => {
-    if (userProfile) {
+    if (activeSlotId) {
       try {
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(userProfile));
+        localStorage.setItem(ACTIVE_SLOT_KEY, activeSlotId);
       } catch (e) {
         // ignore
       }
     }
-  }, [userProfile]);
+  }, [activeSlotId]);
+
+  // Sync active game state back into its save slot
+  useEffect(() => {
+    if (activeSlotId) {
+      setSaveSlots((prev) =>
+        prev.map((slot) =>
+          slot.id === activeSlotId
+            ? {
+                ...slot,
+                gameState,
+                lastSavedAt: new Date().toISOString(),
+              }
+            : slot
+        )
+      );
+    }
+  }, [gameState, activeSlotId]);
 
   // Sound sync
   useEffect(() => {
     soundEngine.setEnabled(gameState.soundEnabled);
   }, [gameState.soundEnabled]);
+
+  // Handle selecting or creating a save file
+  const handleSelectSlot = (slotId: string, customBaristaName?: string) => {
+    const targetSlot = saveSlots.find((s) => s.id === slotId);
+    if (!targetSlot) return;
+
+    setActiveSlotId(slotId);
+
+    if (!targetSlot.gameState) {
+      // Create new save file
+      const newGameState = createDefaultGameState();
+      const updatedSlots = saveSlots.map((s) =>
+        s.id === slotId
+          ? {
+              ...s,
+              baristaName: customBaristaName || 'Java Jones',
+              gameState: newGameState,
+              lastSavedAt: new Date().toISOString(),
+            }
+          : s
+      );
+      setSaveSlots(updatedSlots);
+      setGameState(newGameState);
+    } else {
+      // Load existing save file
+      setGameState(targetSlot.gameState);
+    }
+
+    setIsSaveSlotModalOpen(false);
+    setCurrentView('game');
+    setIsLessonModalOpen(true);
+  };
+
+  const handleDeleteSlot = (slotId: string) => {
+    setSaveSlots((prev) =>
+      prev.map((s) =>
+        s.id === slotId ? { ...s, gameState: null, lastSavedAt: null } : s
+      )
+    );
+    if (activeSlotId === slotId) {
+      setActiveSlotId(null);
+    }
+  };
 
   // Calculate tip multiplier based on purchased upgrades
   const calculateIncomeBonusMultiplier = () => {
@@ -232,52 +300,40 @@ export const App: React.FC = () => {
     }));
   };
 
-  const handleResetGame = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setGameState({
-      currentDay: 1,
-      cash: 150,
-      totalCustomersServed: 0,
-      dayCustomersServed: 0,
-      currentStoreId: 'store_1',
-      purchasedUpgrades: [],
-      completedDays: [],
-      soundEnabled: true,
-      gameStatus: 'playing',
-      activeTab: 'barista',
-    });
+  const handleResetCurrentGame = () => {
+    const defaultState = createDefaultGameState();
+    setGameState(defaultState);
     setIsLessonModalOpen(true);
   };
 
-  const handleSaveAccount = (name: string, title: string, avatar: string) => {
-    setUserProfile({ name, title, avatar });
-  };
+  const activeSlot = saveSlots.find((s) => s.id === activeSlotId && s.gameState);
 
-  // If on landing page
-  if (currentView === 'landing') {
+  // If on Title Screen
+  if (currentView === 'title') {
     return (
       <>
-        <LandingPage
-          onStartGame={() => setCurrentView('game')}
-          onOpenAccount={() => setIsAccountModalOpen(true)}
+        <TitleScreen
+          onOpenSaveSlots={() => setIsSaveSlotModalOpen(true)}
           onOpenCodex={() => {
             setCurrentView('game');
             setGameState((prev) => ({ ...prev, activeTab: 'codex' }));
           }}
-          userProfileName={userProfile ? userProfile.name : null}
+          activeSaveName={activeSlot ? activeSlot.baristaName : null}
+          onContinueGame={() => setCurrentView('game')}
         />
 
-        <AccountModal
-          isOpen={isAccountModalOpen}
-          onClose={() => setIsAccountModalOpen(false)}
-          currentName={userProfile ? userProfile.name : null}
-          onSaveAccount={handleSaveAccount}
+        <SaveSlotModal
+          isOpen={isSaveSlotModalOpen}
+          onClose={() => setIsSaveSlotModalOpen(false)}
+          saveSlots={saveSlots}
+          onSelectSlot={handleSelectSlot}
+          onDeleteSlot={handleDeleteSlot}
         />
       </>
     );
   }
 
-  // Main Game View
+  // Main Coffee Shop Gameplay
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 font-sans selection:bg-amber-500 selection:text-stone-950 flex flex-col">
       {/* Header */}
@@ -286,8 +342,8 @@ export const App: React.FC = () => {
         onToggleSound={handleToggleSound}
         onOpenTab={handleOpenTab}
         onOpenDownload={() => setIsDownloadModalOpen(true)}
-        onResetGame={handleResetGame}
-        onGoToLanding={() => setCurrentView('landing')}
+        onResetGame={handleResetCurrentGame}
+        onGoToLanding={() => setCurrentView('title')}
       />
 
       {/* Main Content Area */}
@@ -356,21 +412,22 @@ export const App: React.FC = () => {
         onClose={() => setIsDownloadModalOpen(false)}
       />
 
-      <AccountModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        currentName={userProfile ? userProfile.name : null}
-        onSaveAccount={handleSaveAccount}
+      <SaveSlotModal
+        isOpen={isSaveSlotModalOpen}
+        onClose={() => setIsSaveSlotModalOpen(false)}
+        saveSlots={saveSlots}
+        onSelectSlot={handleSelectSlot}
+        onDeleteSlot={handleDeleteSlot}
       />
 
       <GameOverModal
         isOpen={gameState.gameStatus === 'bankrupt'}
-        onRestart={handleResetGame}
+        onRestart={handleResetCurrentGame}
       />
 
       <VictoryModal
         isOpen={gameState.gameStatus === 'game_victory'}
-        onRestart={handleResetGame}
+        onRestart={handleResetCurrentGame}
       />
     </div>
   );
