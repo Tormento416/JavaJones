@@ -13,6 +13,7 @@ import { LessonModal } from './components/LessonModal';
 import { ShopUpgrades } from './components/ShopUpgrades';
 import { CodexModal } from './components/CodexModal';
 import { FranchiseMap } from './components/FranchiseMap';
+import { DownloadModal } from './components/DownloadModal';
 import { GameOverModal } from './components/GameOverModal';
 import { VictoryModal } from './components/VictoryModal';
 
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [isBrewing, setIsBrewing] = useState<boolean>(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState<boolean>(true);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
 
   const currentLesson = LESSONS.find((l) => l.day === gameState.currentDay) || LESSONS[0];
 
@@ -225,6 +227,7 @@ export const App: React.FC = () => {
         gameState={gameState}
         onToggleSound={handleToggleSound}
         onOpenTab={handleOpenTab}
+        onOpenDownload={() => setIsDownloadModalOpen(true)}
         onResetGame={handleResetGame}
       />
 
@@ -287,6 +290,11 @@ export const App: React.FC = () => {
         onClose={() => handleOpenTab('barista')}
         gameState={gameState}
         onSelectStore={handleSelectStore}
+      />
+
+      <DownloadModal
+        isOpen={isDownloadModalOpen}
+        onClose={() => setIsDownloadModalOpen(false)}
       />
 
       <GameOverModal

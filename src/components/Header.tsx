@@ -1,12 +1,13 @@
 import React from 'react';
 import type { GameState } from '../types/game';
 import { FRANCHISE_LOCATIONS } from '../data/upgrades';
-import { Volume2, VolumeX, ShoppingBag, BookOpen, MapPin, Coffee, DollarSign, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, ShoppingBag, BookOpen, MapPin, Coffee, DollarSign, RotateCcw, Download } from 'lucide-react';
 
 interface HeaderProps {
   gameState: GameState;
   onToggleSound: () => void;
   onOpenTab: (tab: 'barista' | 'codex' | 'upgrades' | 'franchise') => void;
+  onOpenDownload: () => void;
   onResetGame: () => void;
 }
 
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   gameState,
   onToggleSound,
   onOpenTab,
+  onOpenDownload,
   onResetGame,
 }) => {
   const currentStore = FRANCHISE_LOCATIONS.find((s) => s.id === gameState.currentStoreId) || FRANCHISE_LOCATIONS[0];
@@ -114,6 +116,16 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <MapPin className="w-3.5 h-3.5" />
             <span>Franchise</span>
+          </button>
+
+          {/* Desktop App Download Button */}
+          <button
+            onClick={onOpenDownload}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95 transition-all"
+            title="Download Standalone 1-Click Desktop App (Win/Mac)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download Desktop</span>
           </button>
 
           {/* Reset Progress */}
