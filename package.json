@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
-    "@types/jszip": "^3.4.1 font",
+    "@types/jszip": "^3.4.1",
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.6",
