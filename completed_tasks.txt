@@ -1,2 +1,3 @@
 [SUCCESS] [2026-07-24 18:06:06] Created Java Jones: JavaScript Espresso Empire educational game covering 24 JS core concepts across a 28-day campaign with store upgrades, bankruptcy mechanics, and franchise map.
 [SUCCESS] [2026-07-24 18:09:22] Added 1-Click Desktop App standalone download options for Windows (.zip / .exe) and Mac (.zip / .dmg) with double-clickable application launchers and offline single-file bundles.
+[SUCCESS] [2026-07-24 18:11:05] Fixed Vercel deployment build error by removing unsupported erasableSyntaxOnly TypeScript compiler options from tsconfig.app.json and tsconfig.node.json.
