@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GameState } from '../types/game';
 import { FRANCHISE_LOCATIONS } from '../data/upgrades';
-import { Volume2, VolumeX, ShoppingBag, BookOpen, MapPin, Coffee, DollarSign, RotateCcw, Download } from 'lucide-react';
+import { Volume2, VolumeX, ShoppingBag, BookOpen, MapPin, Coffee, DollarSign, RotateCcw, Download, Home } from 'lucide-react';
 
 interface HeaderProps {
   gameState: GameState;
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenTab: (tab: 'barista' | 'codex' | 'upgrades' | 'franchise') => void;
   onOpenDownload: () => void;
   onResetGame: () => void;
+  onGoToLanding: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTab,
   onOpenDownload,
   onResetGame,
+  onGoToLanding,
 }) => {
   const currentStore = FRANCHISE_LOCATIONS.find((s) => s.id === gameState.currentStoreId) || FRANCHISE_LOCATIONS[0];
   const quotaMet = gameState.dayCustomersServed >= 3;
@@ -26,11 +28,19 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Title & Store Location */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 font-black text-xl shadow-lg shadow-amber-600/30">
+          <button
+            onClick={onGoToLanding}
+            className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-400 transition-colors flex items-center space-x-1"
+            title="Return to Landing Page / Title Screen"
+          >
+            <Home className="w-4 h-4" />
+          </button>
+
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-stone-950 font-black text-lg shadow-lg shadow-amber-600/30">
             ☕
           </div>
           <div>
-            <h1 className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 bg-clip-text text-transparent">
+            <h1 className="font-extrabold text-base tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 bg-clip-text text-transparent">
               Java Jones: JavaScript Espresso Empire
             </h1>
             <div className="flex items-center space-x-2 text-xs text-amber-400/80 font-medium">
@@ -125,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="Download Standalone 1-Click Desktop App (Win/Mac)"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download Desktop</span>
+            <span>Download App</span>
           </button>
 
           {/* Reset Progress */}

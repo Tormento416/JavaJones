@@ -5,6 +5,7 @@ import { INITIAL_UPGRADES } from './data/upgrades';
 import { runJavaScript } from './utils/jsRunner';
 import { soundEngine } from './utils/audio';
 
+import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
 import { CafeVisualizer } from './components/CafeVisualizer';
 import { CodeEditor } from './components/CodeEditor';
@@ -14,13 +15,29 @@ import { ShopUpgrades } from './components/ShopUpgrades';
 import { CodexModal } from './components/CodexModal';
 import { FranchiseMap } from './components/FranchiseMap';
 import { DownloadModal } from './components/DownloadModal';
+import { AccountModal } from './components/AccountModal';
 import { GameOverModal } from './components/GameOverModal';
 import { VictoryModal } from './components/VictoryModal';
 
 const STORAGE_KEY = 'java_jones_game_state_v1';
+const PROFILE_KEY = 'java_jones_user_profile_v1';
 
 export const App: React.FC = () => {
-  // Initialize game state from LocalStorage or defaults
+  // Page view state: default to 'landing'
+  const [currentView, setCurrentView] = useState<'landing' | 'game'>('landing');
+
+  // User Barista Account Profile
+  const [userProfile, setUserProfile] = useState<{ name: string; title: string; avatar: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem(PROFILE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  });
+
+  // Game state
   const [gameState, setGameState] = useState<GameState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -50,6 +67,7 @@ export const App: React.FC = () => {
   const [isBrewing, setIsBrewing] = useState<boolean>(false);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState<boolean>(true);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
 
   const currentLesson = LESSONS.find((l) => l.day === gameState.currentDay) || LESSONS[0];
 
@@ -68,6 +86,17 @@ export const App: React.FC = () => {
       // ignore
     }
   }, [gameState]);
+
+  // Persist profile
+  useEffect(() => {
+    if (userProfile) {
+      try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(userProfile));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [userProfile]);
 
   // Sound sync
   useEffect(() => {
@@ -220,6 +249,35 @@ export const App: React.FC = () => {
     setIsLessonModalOpen(true);
   };
 
+  const handleSaveAccount = (name: string, title: string, avatar: string) => {
+    setUserProfile({ name, title, avatar });
+  };
+
+  // If on landing page
+  if (currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onStartGame={() => setCurrentView('game')}
+          onOpenAccount={() => setIsAccountModalOpen(true)}
+          onOpenCodex={() => {
+            setCurrentView('game');
+            setGameState((prev) => ({ ...prev, activeTab: 'codex' }));
+          }}
+          userProfileName={userProfile ? userProfile.name : null}
+        />
+
+        <AccountModal
+          isOpen={isAccountModalOpen}
+          onClose={() => setIsAccountModalOpen(false)}
+          currentName={userProfile ? userProfile.name : null}
+          onSaveAccount={handleSaveAccount}
+        />
+      </>
+    );
+  }
+
+  // Main Game View
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 font-sans selection:bg-amber-500 selection:text-stone-950 flex flex-col">
       {/* Header */}
@@ -229,6 +287,7 @@ export const App: React.FC = () => {
         onOpenTab={handleOpenTab}
         onOpenDownload={() => setIsDownloadModalOpen(true)}
         onResetGame={handleResetGame}
+        onGoToLanding={() => setCurrentView('landing')}
       />
 
       {/* Main Content Area */}
@@ -295,6 +354,13 @@ export const App: React.FC = () => {
       <DownloadModal
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
+      />
+
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentName={userProfile ? userProfile.name : null}
+        onSaveAccount={handleSaveAccount}
       />
 
       <GameOverModal
