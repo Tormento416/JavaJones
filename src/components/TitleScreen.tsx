@@ -291,17 +291,27 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       {/* ── STICKY NAVIGATION HEADER ──────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-stone-900 bg-stone-950/90 backdrop-blur-md px-6 py-4 shadow-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <a href="#" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-500 flex items-center justify-center text-stone-950 font-black text-xl shadow-lg shadow-amber-600/30 group-hover:scale-105 transition-transform">
-              ☕
-            </div>
-            <div>
-              <span className="font-black text-base tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 bg-clip-text text-transparent">
-                JAVA JONES
-              </span>
-              <span className="text-[10px] text-amber-500/80 block font-bold">JavaScript Espresso Empire</span>
-            </div>
-          </a>
+          <div className="flex items-center space-x-3">
+            <a
+              href="https://tormento-learning-games.vercel.app/"
+              className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-amber-400 text-xs font-bold transition-all flex items-center space-x-1 border border-amber-500/40 hover:border-amber-400 shadow-md"
+              title="Return Home to Games Portal"
+            >
+              <span>&lt; Return Home</span>
+            </a>
+
+            <a href="#" className="flex items-center space-x-3 group">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-500 flex items-center justify-center text-stone-950 font-black text-xl shadow-lg shadow-amber-600/30 group-hover:scale-105 transition-transform">
+                ☕
+              </div>
+              <div>
+                <span className="font-black text-base tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-400 bg-clip-text text-transparent">
+                  JAVA JONES
+                </span>
+                <span className="text-[10px] text-amber-500/80 block font-bold">JavaScript Espresso Empire</span>
+              </div>
+            </a>
+          </div>
 
           {/* Quick Nav Links */}
           <nav className="hidden md:flex items-center space-x-6 text-xs font-bold text-stone-400">

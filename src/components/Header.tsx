@@ -28,6 +28,14 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Title & Store Location */}
         <div className="flex items-center space-x-3">
+          <a
+            href="https://tormento-learning-games.vercel.app/"
+            className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-400 text-xs font-bold transition-colors flex items-center space-x-1 border border-amber-900/50"
+            title="Return Home to Games Portal"
+          >
+            <span>&lt; Return Home</span>
+          </a>
+
           <button
             onClick={onGoToLanding}
             className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-400 transition-colors flex items-center space-x-1"

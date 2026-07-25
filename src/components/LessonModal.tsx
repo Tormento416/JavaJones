@@ -1,19 +1,20 @@
 import React from 'react';
 import type { Lesson } from '../types/game';
-import { BookOpen, Play } from 'lucide-react';
+import { BookOpen, Play, X } from 'lucide-react';
 
 interface LessonModalProps {
   lesson: Lesson;
   isOpen: boolean;
   onStartDay: () => void;
+  onClose?: () => void;
 }
 
-export const LessonModal: React.FC<LessonModalProps> = ({ lesson, isOpen, onStartDay }) => {
+export const LessonModal: React.FC<LessonModalProps> = ({ lesson, isOpen, onStartDay, onClose }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-stone-900 border border-amber-500/40 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-scale-up text-stone-100">
+      <div className="bg-stone-900 border border-amber-500/40 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 animate-scale-up text-stone-100 relative">
         {/* Header Badge */}
         <div className="flex items-center justify-between border-b border-stone-800 pb-4">
           <div className="flex items-center space-x-3">
@@ -27,8 +28,19 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, isOpen, onStar
               <h2 className="text-xl font-black text-stone-100">{lesson.title}</h2>
             </div>
           </div>
-          <div className="bg-stone-950 px-3 py-1 rounded-xl border border-stone-800 text-xs font-mono text-emerald-400 font-bold">
-            +${lesson.rewardMoney} Profit
+          <div className="flex items-center space-x-3">
+            <div className="bg-stone-950 px-3 py-1 rounded-xl border border-stone-800 text-xs font-mono text-emerald-400 font-bold">
+              +${lesson.rewardMoney} Profit
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-amber-400 transition-colors border border-stone-700"
+                title="Close modal and return home"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -67,14 +79,24 @@ export const LessonModal: React.FC<LessonModalProps> = ({ lesson, isOpen, onStar
           </div>
         </div>
 
-        {/* Start Button */}
-        <button
-          onClick={onStartDay}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/20 active:scale-98 transition-all"
-        >
-          <Play className="w-4 h-4 fill-current" />
-          <span>Open Shop & Start Day {lesson.day}!</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-3 pt-1">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="w-1/3 py-3.5 rounded-2xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white font-bold text-xs transition-all border border-stone-700"
+            >
+              Cancel / Return Home
+            </button>
+          )}
+          <button
+            onClick={onStartDay}
+            className={`${onClose ? 'w-2/3' : 'w-full'} py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-black text-sm flex items-center justify-center space-x-2 shadow-xl shadow-amber-500/20 active:scale-98 transition-all`}
+          >
+            <Play className="w-4 h-4 fill-current" />
+            <span>Open Shop & Start Day {lesson.day}!</span>
+          </button>
+        </div>
       </div>
     </div>
   );

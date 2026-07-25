@@ -39,6 +39,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <nav className="bg-stone-900/90 border-b border-amber-900/40 backdrop-blur-md sticky top-0 z-40 px-6 py-4 shadow-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
+            <a
+              href="https://tormento-learning-games.vercel.app/"
+              className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-400 text-xs font-bold transition-colors flex items-center space-x-1 border border-amber-900/50"
+              title="Return Home to Games Portal"
+            >
+              <span>&lt; Return Home</span>
+            </a>
+
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-500 flex items-center justify-center text-stone-950 font-black text-xl shadow-lg shadow-amber-600/30">
               ☕
             </div>

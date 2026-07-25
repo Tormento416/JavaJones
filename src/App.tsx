@@ -494,6 +494,10 @@ export const App: React.FC = () => {
         lesson={currentLesson}
         isOpen={isLessonModalOpen && gameState.gameStatus === 'playing'}
         onStartDay={() => setIsLessonModalOpen(false)}
+        onClose={() => {
+          setIsLessonModalOpen(false);
+          setCurrentView('title');
+        }}
       />
 
       <ShopUpgrades
