@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Play, Download, Monitor, Apple, ShieldCheck, Sparkles, BookOpen, Save } from 'lucide-react';
+import { Play, Download, Monitor, Apple, ShieldCheck, Sparkles, BookOpen, Save, LogOut, Wifi, WifiOff } from 'lucide-react';
 
 interface TitleScreenProps {
   onOpenSaveSlots: () => void;
   onOpenCodex: () => void;
   activeSaveName: string | null;
   onContinueGame: () => void;
+  userEmail: string | null;
+  isGuest: boolean;
+  onSignOut: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
@@ -13,6 +16,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onOpenCodex,
   activeSaveName,
   onContinueGame,
+  userEmail,
+  isGuest,
+  onSignOut,
 }) => {
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -53,6 +59,29 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* Auth Status Badge */}
+          {userEmail ? (
+            <div className="flex items-center space-x-2">
+              <span className="hidden sm:flex items-center space-x-1.5 text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 px-2.5 py-1 rounded-full font-bold">
+                <Wifi className="w-3 h-3" />
+                <span className="max-w-[120px] truncate">{userEmail}</span>
+              </span>
+              <button
+                onClick={onSignOut}
+                className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-rose-950 border border-stone-800 hover:border-rose-800 text-xs font-bold text-stone-400 hover:text-rose-400 flex items-center space-x-1.5 transition-all"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          ) : isGuest ? (
+            <span className="flex items-center space-x-1.5 text-[10px] bg-stone-900 text-stone-500 border border-stone-800 px-2.5 py-1 rounded-full font-bold">
+              <WifiOff className="w-3 h-3" />
+              <span>Guest Mode</span>
+            </span>
+          ) : null}
+
           <button
             onClick={onOpenCodex}
             className="px-3.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-xs font-bold text-amber-300 flex items-center space-x-1.5 transition-all"

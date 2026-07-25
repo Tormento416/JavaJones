@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { GameState, RunResult, Upgrade } from './types/game';
 import { LESSONS } from './data/lessons';
 import { INITIAL_UPGRADES } from './data/upgrades';
 import { runJavaScript } from './utils/jsRunner';
 import { soundEngine } from './utils/audio';
 
+import { getStoredSession, getValidSession, signOut } from './utils/supabase';
+import type { SupabaseSession } from './utils/supabase';
+import { downloadSaveSlots, mergeSaveSlots, debouncedUpload } from './utils/saveSync';
+
+import { AuthScreen } from './components/AuthScreen';
 import { TitleScreen } from './components/TitleScreen';
 import { SaveSlotModal } from './components/SaveSlotModal';
 import type { SaveSlotData } from './components/SaveSlotModal';
@@ -23,6 +28,12 @@ import { VictoryModal } from './components/VictoryModal';
 const SAVE_SLOTS_KEY = 'java_jones_save_slots_v2';
 const ACTIVE_SLOT_KEY = 'java_jones_active_slot_id_v2';
 
+const DEFAULT_SAVE_SLOTS: SaveSlotData[] = [
+  { id: 'slot_1', slotNumber: 1, baristaName: 'Java Jones', avatar: '🧑‍🍳', gameState: null, lastSavedAt: null },
+  { id: 'slot_2', slotNumber: 2, baristaName: 'Java Jones', avatar: '👩‍💻', gameState: null, lastSavedAt: null },
+  { id: 'slot_3', slotNumber: 3, baristaName: 'Java Jones', avatar: '🧔‍♂️', gameState: null, lastSavedAt: null },
+];
+
 const createDefaultGameState = (): GameState => ({
   currentDay: 1,
   cash: 150,
@@ -37,38 +48,39 @@ const createDefaultGameState = (): GameState => ({
 });
 
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'title' | 'game'>('title');
+  // ── Auth State ───────────────────────────────────────────
+  const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // ── View State: auth → title → game ──────────────────────
+  const [currentView, setCurrentView] = useState<'auth' | 'title' | 'game'>('auth');
   const [isSaveSlotModalOpen, setIsSaveSlotModalOpen] = useState<boolean>(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
 
-  // 3 Game Save File Slots
+  // ── Save Slots ───────────────────────────────────────────
   const [saveSlots, setSaveSlots] = useState<SaveSlotData[]>(() => {
     try {
       const saved = localStorage.getItem(SAVE_SLOTS_KEY);
       if (saved) {
         return JSON.parse(saved);
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
-    return [
-      { id: 'slot_1', slotNumber: 1, baristaName: 'Java Jones', avatar: '🧑‍🍳', gameState: null, lastSavedAt: null },
-      { id: 'slot_2', slotNumber: 2, baristaName: 'Java Jones', avatar: '👩‍💻', gameState: null, lastSavedAt: null },
-      { id: 'slot_3', slotNumber: 3, baristaName: 'Java Jones', avatar: '🧔‍♂️', gameState: null, lastSavedAt: null },
-    ];
+    return [...DEFAULT_SAVE_SLOTS];
   });
 
   const [activeSlotId, setActiveSlotId] = useState<string | null>(() => {
     try {
       return localStorage.getItem(ACTIVE_SLOT_KEY);
-    } catch (e) {
+    } catch {
       return null;
     }
   });
 
-  // Current active game state
+  // ── Game State ───────────────────────────────────────────
   const [gameState, setGameState] = useState<GameState>(createDefaultGameState());
-
   const [upgrades] = useState<Upgrade[]>(INITIAL_UPGRADES);
   const [code, setCode] = useState<string>('');
   const [runResult, setRunResult] = useState<RunResult | null>(null);
@@ -77,7 +89,43 @@ export const App: React.FC = () => {
 
   const currentLesson = LESSONS.find((l) => l.day === gameState.currentDay) || LESSONS[0];
 
-  // Set starter code when day changes
+  // ── Check for existing session on mount ──────────────────
+  useEffect(() => {
+    const checkSession = async () => {
+      const stored = getStoredSession();
+      if (stored) {
+        // Validate / refresh the stored session
+        const valid = await getValidSession();
+        if (valid) {
+          setSession(valid);
+          setCurrentView('title');
+
+          // Sync cloud saves on login
+          try {
+            const cloudSlots = await downloadSaveSlots(valid);
+            if (cloudSlots && cloudSlots.length > 0) {
+              setSaveSlots((local) => {
+                const merged = mergeSaveSlots(local, cloudSlots);
+                localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(merged));
+                return merged;
+              });
+            }
+          } catch {
+            // cloud sync failed — continue with local
+          }
+        } else {
+          // Token expired and refresh failed — show auth
+          setCurrentView('auth');
+        }
+      } else {
+        setCurrentView('auth');
+      }
+      setAuthChecked(true);
+    };
+    checkSession();
+  }, []);
+
+  // ── Set starter code when day changes ────────────────────
   useEffect(() => {
     setCode(currentLesson.starterCode);
     setRunResult(null);
@@ -86,27 +134,27 @@ export const App: React.FC = () => {
     }
   }, [gameState.currentDay, currentView]);
 
-  // Persist save slots to localStorage
+  // ── Persist save slots to localStorage ───────────────────
   useEffect(() => {
     try {
       localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(saveSlots));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [saveSlots]);
 
-  // Persist active slot ID
+  // ── Persist active slot ID ───────────────────────────────
   useEffect(() => {
     if (activeSlotId) {
       try {
         localStorage.setItem(ACTIVE_SLOT_KEY, activeSlotId);
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
   }, [activeSlotId]);
 
-  // Sync active game state back into its save slot
+  // ── Sync active game state back into its save slot ───────
   useEffect(() => {
     if (activeSlotId) {
       setSaveSlots((prev) =>
@@ -123,12 +171,53 @@ export const App: React.FC = () => {
     }
   }, [gameState, activeSlotId]);
 
-  // Sound sync
+  // ── Cloud sync: upload save slots when they change ───────
+  useEffect(() => {
+    if (session && !isGuest) {
+      debouncedUpload(session, saveSlots);
+    }
+  }, [saveSlots, session, isGuest]);
+
+  // ── Sound sync ───────────────────────────────────────────
   useEffect(() => {
     soundEngine.setEnabled(gameState.soundEnabled);
   }, [gameState.soundEnabled]);
 
-  // Handle selecting or creating a save file
+  // ── Auth Handlers ────────────────────────────────────────
+  const handleAuthenticated = useCallback(async (newSession: SupabaseSession) => {
+    setSession(newSession);
+    setIsGuest(false);
+    setCurrentView('title');
+
+    // Pull cloud saves on sign-in
+    try {
+      const cloudSlots = await downloadSaveSlots(newSession);
+      if (cloudSlots && cloudSlots.length > 0) {
+        setSaveSlots((local) => {
+          const merged = mergeSaveSlots(local, cloudSlots);
+          localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }
+    } catch {
+      // continue with local
+    }
+  }, []);
+
+  const handleContinueAsGuest = useCallback(() => {
+    setIsGuest(true);
+    setSession(null);
+    setCurrentView('title');
+  }, []);
+
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    setSession(null);
+    setIsGuest(false);
+    setCurrentView('auth');
+  }, []);
+
+  // ── Save Slot Handlers ──────────────────────────────────
   const handleSelectSlot = (slotId: string, customBaristaName?: string) => {
     const targetSlot = saveSlots.find((s) => s.id === slotId);
     if (!targetSlot) return;
@@ -171,7 +260,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Calculate tip multiplier based on purchased upgrades
+  // ── Gameplay Handlers ───────────────────────────────────
   const calculateIncomeBonusMultiplier = () => {
     let totalBonus = 1.0;
     upgrades.forEach((u) => {
@@ -182,7 +271,6 @@ export const App: React.FC = () => {
     return totalBonus;
   };
 
-  // Run Code / Serve Customer handler
   const handleRunCode = () => {
     setIsBrewing(true);
     soundEngine.playBrew();
@@ -193,7 +281,6 @@ export const App: React.FC = () => {
       setIsBrewing(false);
 
       if (res.success) {
-        // Customer satisfied!
         soundEngine.playSuccess();
 
         const bonus = calculateIncomeBonusMultiplier();
@@ -206,12 +293,10 @@ export const App: React.FC = () => {
         const nextCash = gameState.cash + earned;
 
         if (nextServedInDay >= 3) {
-          // Quota of 3 customers reached for today!
           const nextDay = gameState.currentDay + 1;
           const completed = Array.from(new Set([...gameState.completedDays, gameState.currentDay]));
 
           if (gameState.currentDay >= 28) {
-            // Victory!
             soundEngine.playFanfare();
             setGameState((prev) => ({
               ...prev,
@@ -222,7 +307,6 @@ export const App: React.FC = () => {
               gameStatus: 'game_victory',
             }));
           } else {
-            // Advance to next day
             setGameState((prev) => ({
               ...prev,
               cash: nextCash,
@@ -233,7 +317,6 @@ export const App: React.FC = () => {
             }));
           }
         } else {
-          // Stay on current day, increment served count
           setGameState((prev) => ({
             ...prev,
             cash: nextCash,
@@ -242,13 +325,11 @@ export const App: React.FC = () => {
           }));
         }
       } else {
-        // Syntax Error or Test Fail! Refund penalty fine
         soundEngine.playError();
         const fine = 15;
         const newCash = gameState.cash - fine;
 
         if (newCash < 0) {
-          // Bankrupt!
           setGameState((prev) => ({
             ...prev,
             cash: newCash,
@@ -308,7 +389,31 @@ export const App: React.FC = () => {
 
   const activeSlot = saveSlots.find((s) => s.id === activeSlotId && s.gameState);
 
-  // If on Title Screen
+  // ── Loading splash while checking session ────────────────
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-amber-600 to-yellow-500 flex items-center justify-center text-2xl mx-auto animate-pulse shadow-xl shadow-amber-600/20">
+            ☕
+          </div>
+          <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">Loading Java Jones...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Auth Screen ──────────────────────────────────────────
+  if (currentView === 'auth') {
+    return (
+      <AuthScreen
+        onAuthenticated={handleAuthenticated}
+        onContinueAsGuest={handleContinueAsGuest}
+      />
+    );
+  }
+
+  // ── Title Screen ─────────────────────────────────────────
   if (currentView === 'title') {
     return (
       <>
@@ -320,6 +425,9 @@ export const App: React.FC = () => {
           }}
           activeSaveName={activeSlot ? activeSlot.baristaName : null}
           onContinueGame={() => setCurrentView('game')}
+          userEmail={session?.user.email ?? null}
+          isGuest={isGuest}
+          onSignOut={handleSignOut}
         />
 
         <SaveSlotModal
@@ -333,7 +441,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // Main Coffee Shop Gameplay
+  // ── Main Coffee Shop Gameplay ────────────────────────────
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 font-sans selection:bg-amber-500 selection:text-stone-950 flex flex-col">
       {/* Header */}
