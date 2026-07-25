@@ -53,8 +53,8 @@ export const App: React.FC = () => {
   const [isGuest, setIsGuest] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // ── View State: auth → title → game ──────────────────────
-  const [currentView, setCurrentView] = useState<'auth' | 'title' | 'game'>('auth');
+  // ── View State: title → game | auth ──────────────────────
+  const [currentView, setCurrentView] = useState<'auth' | 'title' | 'game'>('title');
   const [isSaveSlotModalOpen, setIsSaveSlotModalOpen] = useState<boolean>(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState<boolean>(false);
 
@@ -98,7 +98,7 @@ export const App: React.FC = () => {
         const valid = await getValidSession();
         if (valid) {
           setSession(valid);
-          setCurrentView('title');
+          setIsGuest(false);
 
           // Sync cloud saves on login
           try {
@@ -114,13 +114,13 @@ export const App: React.FC = () => {
             // cloud sync failed — continue with local
           }
         } else {
-          // Token expired and refresh failed — show auth
-          setCurrentView('auth');
+          setIsGuest(true);
         }
       } else {
-        setCurrentView('auth');
+        setIsGuest(true);
       }
       setAuthChecked(true);
+      // Title screen remains active (always first)
     };
     checkSession();
   }, []);
@@ -428,6 +428,7 @@ export const App: React.FC = () => {
           userEmail={session?.user.email ?? null}
           isGuest={isGuest}
           onSignOut={handleSignOut}
+          onOpenAuth={() => setCurrentView('auth')}
         />
 
         <SaveSlotModal

@@ -9,6 +9,7 @@ interface TitleScreenProps {
   userEmail: string | null;
   isGuest: boolean;
   onSignOut: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
@@ -19,6 +20,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   userEmail,
   isGuest,
   onSignOut,
+  onOpenAuth,
 }) => {
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -75,12 +77,22 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                 <span className="hidden sm:inline">Sign Out</span>
               </button>
             </div>
-          ) : isGuest ? (
-            <span className="flex items-center space-x-1.5 text-[10px] bg-stone-900 text-stone-500 border border-stone-800 px-2.5 py-1 rounded-full font-bold">
-              <WifiOff className="w-3 h-3" />
-              <span>Guest Mode</span>
-            </span>
-          ) : null}
+          ) : (
+            <div className="flex items-center space-x-2">
+              <span className="flex items-center space-x-1.5 text-[10px] bg-stone-900 text-stone-500 border border-stone-800 px-2.5 py-1 rounded-full font-bold">
+                <WifiOff className="w-3 h-3" />
+                <span>{isGuest ? 'Guest Mode' : 'Local Mode'}</span>
+              </span>
+              {onOpenAuth && (
+                <button
+                  onClick={onOpenAuth}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 flex items-center space-x-1.5 transition-all"
+                >
+                  <span>☁️ Cloud Save / Log In</span>
+                </button>
+              )}
+            </div>
+          )}
 
           <button
             onClick={onOpenCodex}
@@ -131,6 +143,16 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <Save className="w-5 h-5 text-amber-400" />
             <span>{activeSaveName ? 'Select Save Slot / New Game' : 'Start New Game / Select Save File'}</span>
           </button>
+
+          {!userEmail && onOpenAuth && (
+            <button
+              onClick={onOpenAuth}
+              className="w-full py-3.5 rounded-2xl bg-[#1a1005] border border-amber-500/40 hover:border-amber-400 text-amber-200 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md"
+            >
+              <Wifi className="w-4 h-4 text-amber-400" />
+              <span>☁️ Cloud Save &amp; Sync (Sign Up / Log In)</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenCodex}
